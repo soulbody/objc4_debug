@@ -337,10 +337,10 @@ extern "C" IMP cache_getImp(Class cls, SEL sel, IMP value_on_constant_cache_miss
 
 struct cache_t {
 private:
-    explicit_atomic<uintptr_t> _bucketsAndMaybeMask;
+    explicit_atomic<uintptr_t> _bucketsAndMaybeMask; //写在一起的目的是为了优化
     union {
         struct {
-            explicit_atomic<mask_t>    _maybeMask;
+            explicit_atomic<mask_t>    _maybeMask; //最小的buckets大小是 4（为了支持扩容算法需要）
 #if __LP64__
             uint16_t                   _flags;
 #endif
@@ -349,13 +349,13 @@ private:
         explicit_atomic<preopt_cache_t *> _originalPreoptCache;
     };
 
-#if CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_OUTLINED
+#if CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_OUTLINED //macOS、模拟器
     // _bucketsAndMaybeMask is a buckets_t pointer
     // _maybeMask is the buckets mask
 
     static constexpr uintptr_t bucketsMask = ~0ul;
     static_assert(!CONFIG_USE_PREOPT_CACHES, "preoptimized caches not supported");
-#elif CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_HIGH_16_BIG_ADDRS
+#elif CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_HIGH_16_BIG_ADDRS//64位真机
     static constexpr uintptr_t maskShift = 48;
     static constexpr uintptr_t maxMask = ((uintptr_t)1 << (64 - maskShift)) - 1;
     static constexpr uintptr_t bucketsMask = ((uintptr_t)1 << maskShift) - 1;
@@ -433,13 +433,13 @@ private:
     const preopt_cache_t *disguised_preopt_cache() const;
 #endif
 
-    void incrementOccupied();
-    void setBucketsAndMask(struct bucket_t *newBuckets, mask_t newMask);
+    void incrementOccupied();// 增加缓存，_occupied自++
+    void setBucketsAndMask(struct bucket_t *newBuckets, mask_t newMask);// 设置一个新的Buckets
 
     void reallocate(mask_t oldCapacity, mask_t newCapacity, bool freeOld);
     void collect_free(bucket_t *oldBuckets, mask_t oldCapacity);
 
-    static bucket_t *emptyBuckets();
+    static bucket_t *emptyBuckets(); // 清空buckets
     static bucket_t *allocateBuckets(mask_t newCapacity);
     static bucket_t *emptyBucketsForCapacity(mask_t capacity, bool allocate = true);
     static struct bucket_t * endMarker(struct bucket_t *b, uint32_t cap);
@@ -450,8 +450,8 @@ public:
     // objcdt reaches into fields while the process is suspended
     // hence doesn't care for locks and pesky little details like this
     // and can safely use these.
-    unsigned capacity() const;
-    struct bucket_t *buckets() const;
+    unsigned capacity() const; //获取已经占用的缓存个数_occupied
+    struct bucket_t *buckets() const; // _buckets对外的一个获取函数
     Class cls() const;
 
 #if CONFIG_USE_PREOPT_CACHES
@@ -837,7 +837,7 @@ public:
             big().imp = imp;
         }
     }
-
+    // 方法的描述， 包含name和types
     objc_method_description *getDescription() const {
         return isSmall() ? getSmallDescription() : (struct objc_method_description *)this;
     }
@@ -1690,9 +1690,9 @@ struct objc_class : objc_object {
   objc_class(objc_class&&) = delete;
   void operator=(const objc_class&) = delete;
   void operator=(objc_class&&) = delete;
-    // Class ISA;
-    Class superclass;
-    cache_t cache;             // formerly cache pointer and vtable
+    // Class ISA; 继承过来isa指针
+    Class superclass; // 父类
+    cache_t cache;             // 方法缓存 formerly cache pointer and vtable
     class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
 
     Class getSuperclass() const {

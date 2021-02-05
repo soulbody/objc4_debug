@@ -12,13 +12,15 @@
 // 爽了之后,还来一个 👍
 
 #import <Foundation/Foundation.h>
-
+#import "Person.h"
+//#import "objc.h"
+//#import "objc-runtime-new.h"
+#import "objc-class.h"
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
-        // insert code here...
-        NSLog(@"Hello, World!");
-        NSObject *objc = [NSObject alloc];
-        
+        Person *person = [[Person alloc] init];
+        person.name = @"lyh";
+        person.age = 27;
     }
     return 0;
 }

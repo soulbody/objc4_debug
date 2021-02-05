@@ -7990,6 +7990,7 @@ _class_createInstanceFromZone(Class cls, size_t extraBytes, void *zone,
         return nil;
     }
 
+    // 设置isa，把isa关联到cls中
     if (!zone && fast) {
         obj->initInstanceIsa(cls, hasCxxDtor);
     } else {
